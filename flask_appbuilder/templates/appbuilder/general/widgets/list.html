@@ -56,12 +56,7 @@
                     </center></td>
                 {% endif %}
                 {% for value in include_columns %}
-                    {% set formatter = formatters_columns.get(value) %}
-                    {% if formatter %}
-                        <td>{{ formatter(item[value]) }}</td>
-                    {% else %}
-                        <td>{{ item[value]|safe }}</td>
-                    {% endif %}
+                    <td>{{ item[value] }}</td>
                 {% endfor %}
             </tr>
         {% endfor %}
