@@ -15,7 +15,7 @@ from ..mixins import FileColumn, ImageColumn
 from ...filemanager import FileManager, ImageManager
 from ..._compat import as_unicode
 from ...const import LOGMSG_ERR_DBI_ADD_GENERIC, LOGMSG_ERR_DBI_EDIT_GENERIC, LOGMSG_ERR_DBI_DEL_GENERIC, \
-                     LOGMSG_WAR_DBI_ADD_INTEGRITY, LOGMSG_WAR_DBI_EDIT_INTEGRITY, LOGMSG_WAR_DBI_DEL_INTEGRITY
+    LOGMSG_WAR_DBI_ADD_INTEGRITY, LOGMSG_WAR_DBI_EDIT_INTEGRITY, LOGMSG_WAR_DBI_DEL_INTEGRITY
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +24,10 @@ def _include_filters(obj):
     for key in filters.__all__:
         if not hasattr(obj, key):
             setattr(obj, key, getattr(filters, key))
+
+def _is_sqla_type(obj, sa_type):
+    return isinstance(obj, sa_type) or \
+        isinstance(obj, sa.types.TypeDecorator) and isinstance(obj.impl, sa_type)
 
 
 class SQLAInterface(BaseInterface):
@@ -66,8 +70,11 @@ class SQLAInterface(BaseInterface):
             # this decorator will add a property to the method named *_col_name*
             if hasattr(self.obj, order_column):
                 if hasattr(getattr(self.obj, order_column), '_col_name'):
-                    order_column = getattr(getattr(self.obj, order_column),'_col_name')
-            query = query.order_by(order_column + ' ' + order_direction)
+                    order_column = getattr(self._get_attr(order_column), '_col_name')
+            if order_direction == 'asc':
+                query = query.order_by(self._get_attr(order_column).asc())
+            else:
+                query = query.order_by(self._get_attr(order_column).desc())
         return query
 
     def query(self, filters=None, order_column='', order_direction='',
@@ -114,7 +121,7 @@ class SQLAInterface(BaseInterface):
 
         return count, query.all()
 
-    def query_simple_group(self, group_by='', aggregate_func = None, aggregate_col = None, filters=None):
+    def query_simple_group(self, group_by='', aggregate_func=None, aggregate_col=None, filters=None):
         query = self.session.query(self.obj)
         query = self._get_base_query(query=query, filters=filters)
         query_result = query.all()
@@ -155,49 +162,61 @@ class SQLAInterface(BaseInterface):
 
     def is_string(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.String)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.String)
         except:
             return False
 
     def is_text(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.Text)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Text)
+        except:
+            return False
+
+    def is_binary(self, col_name):
+        try:
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.LargeBinary)
         except:
             return False
 
     def is_integer(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.Integer)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Integer)
         except:
             return False
 
     def is_numeric(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.Numeric)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Numeric)
         except:
             return False
 
     def is_float(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.Float)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Float)
         except:
             return False
 
     def is_boolean(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.Boolean)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Boolean)
         except:
             return False
 
     def is_date(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.Date)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Date)
         except:
             return False
 
     def is_datetime(self, col_name):
         try:
-            return isinstance(self.list_columns[col_name].type, sa.types.DateTime)
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.DateTime)
+        except:
+            return False
+
+    def is_enum(self, col_name):
+        try:
+            return _is_sqla_type(self.list_columns[col_name].type, sa.types.Enum)
         except:
             return False
 
@@ -256,6 +275,9 @@ class SQLAInterface(BaseInterface):
         except:
             return False
 
+    def is_pk_composite(self):
+         return len(self.obj.__mapper__.primary_key) > 1
+
     def is_fk(self, col_name):
         try:
             return self.list_columns[col_name].foreign_keys
@@ -264,20 +286,20 @@ class SQLAInterface(BaseInterface):
 
     def get_max_length(self, col_name):
         try:
+            if self.is_enum(col_name):
+                return -1
             col = self.list_columns[col_name]
             if col.type.length:
                 return col.type.length
             else:
                 return -1
         except:
-                return -1
-
-
+            return -1
 
     """
-    -----------------------------------------
-           FUNCTIONS FOR CRUD OPERATIONS
-    -----------------------------------------
+    -------------------------------
+     FUNCTIONS FOR CRUD OPERATIONS
+    -------------------------------
     """
 
     def add(self, item):
@@ -351,9 +373,10 @@ class SQLAInterface(BaseInterface):
             self.session.rollback()
             return False
 
-
     """
-    FILE HANDLING METHODS
+    -----------------------
+     FILE HANDLING METHODS
+    -----------------------
     """
 
     def _add_files(self, this_request, item):
@@ -379,10 +402,11 @@ class SQLAInterface(BaseInterface):
                     im.delete_file(getattr(item, file_col))
 
     """
-    -----------------------------------------
-         FUNCTIONS FOR RELATED MODELS
-    -----------------------------------------
+    ------------------------------
+     FUNCTIONS FOR RELATED MODELS
+    ------------------------------
     """
+
     def get_col_default(self, col_name):
         default = getattr(self.list_columns[col_name], 'default', None)
         if default is not None:
@@ -418,9 +442,10 @@ class SQLAInterface(BaseInterface):
                 if model == self.get_related_model(col_name):
                     return col_name
 
-
     """
-    ----------- GET METHODS -------------
+    ------------- 
+     GET METHODS
+    -------------
     """
 
     def get_columns_list(self):
@@ -439,7 +464,7 @@ class SQLAInterface(BaseInterface):
                 ret_lst.append(col_name)
         return ret_lst
 
-    #TODO get different solution, more integrated with filters
+    # TODO get different solution, more integrated with filters
     def get_search_columns_list(self):
         ret_lst = list()
         for col_name in self.get_columns_list():
@@ -468,10 +493,10 @@ class SQLAInterface(BaseInterface):
             if not self.is_relation(col_name):
                 if hasattr(self.obj, col_name):
                     if (not hasattr(getattr(self.obj, col_name), '__call__') or
-                        hasattr(getattr(self.obj, col_name), '_col_name')):
+                            hasattr(getattr(self.obj, col_name), '_col_name')):
                         ret_lst.append(col_name)
                 else:
-                     ret_lst.append(col_name)
+                    ret_lst.append(col_name)
         return ret_lst
 
     def get_file_column_list(self):
@@ -492,15 +517,21 @@ class SQLAInterface(BaseInterface):
         if filters:
             query = query = self.session.query(self.obj)
             _filters = filters.copy()
-            _filters.add_filter(self.get_pk_name(), self.FilterEqual, id)
+            pk = self.get_pk_name()
+            if self.is_pk_composite():
+                for _pk, _id in zip(pk, id):
+                    _filters.add_filter(_pk, self.FilterEqual, _id)
+            else:
+                _filters.add_filter(pk, self.FilterEqual, id)
             query = self._get_base_query(query=query, filters=_filters)
             return query.first()
         return self.session.query(self.obj).get(id)
 
     def get_pk_name(self):
-        for col_name in self.list_columns.keys():
-            if self.is_pk(col_name):
-                return col_name
+        pk = [pk.name for pk in self.obj.__mapper__.primary_key]
+        if pk:
+            return pk if self.is_pk_composite() else pk[0]
+
 
 """
     For Retro-Compatibility

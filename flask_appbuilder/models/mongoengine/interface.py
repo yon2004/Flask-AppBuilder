@@ -50,7 +50,7 @@ class MongoEngineInterface(BaseInterface):
         # order the data
         if order_column != '':
             if hasattr(getattr(self.obj, order_column), '_col_name'):
-                order_column = getattr(getattr(self.obj, order_column),'_col_name')
+                order_column = getattr(getattr(self.obj, order_column), '_col_name')
             if order_direction == 'asc':
                 objs = objs.order_by('-{0}'.format(order_column))
             else:
@@ -149,6 +149,9 @@ class MongoEngineInterface(BaseInterface):
 
     def is_pk(self, col_name):
         return col_name == 'id'
+
+    def is_pk_composite(self):
+        return False
 
     def get_max_length(self, col_name):
         try:

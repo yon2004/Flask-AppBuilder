@@ -4,9 +4,10 @@
 *.pyc
 app.db
 ./tmp
-./build/*
-./.idea
-./.idea/*
+build/
+dist/
+docs/_build/
+.idea
 .idea/
 env
 venv

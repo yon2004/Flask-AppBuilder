@@ -1,5 +1,5 @@
-Model Relations
-===============
+Model Relations/Composite keys
+==============================
 
 On this chapter we are going to show how to setup model relationships and their
 view integration on the framework
@@ -28,7 +28,7 @@ Let's define our models (models.py)::
     import datetime
     from sqlalchemy import Column, Integer, String, ForeignKey, Date, Text
     from sqlalchemy.orm import relationship
-    from flask.ext.appbuilder import Model
+    from flask_appbuilder import Model
 
 
     class Department(Model):
@@ -76,8 +76,8 @@ This has two, one to many relations:
 
 Now let's define ours views (views.py)::
 
-    from flask.ext.appbuilder import ModelView
-    from flask.ext.appbuilder.models.sqla.interface import SQLAInterface
+    from flask_appbuilder import ModelView
+    from flask_appbuilder.models.sqla.interface import SQLAInterface
     from .models import Employee,Department, Function, EmployeeHistory
     from app import appbuilder
 
@@ -218,3 +218,15 @@ on the employee detail view::
 
 Take a look and run the example on `Employees example <https://github.com/dpgaspar/Flask-AppBuilder/tree/master/examples/employees>`_
 It includes extra functionality like readonly fields, pre and post update logic, etc...
+
+Composite Keys
+--------------
+
+Composite keys is supported for SQLAlchemy only, you can reference them using SQLAlchemy 'relationship',
+and use them on combo boxes and/or related views, take a look at the
+`example <https://github.com/dpgaspar/Flask-AppBuilder/tree/master/examples/composite_keys>`_
+
+Notice the use of composite keys to prevent that and Item (server or whatever)
+can be on more then a Rack/Datacenter at the same time, and that a Datacenter can't have two racks with the same number
+
+.. note:: This feature is only supported since 1.9.6

@@ -1,3 +1,4 @@
+import re
 import datetime
 import logging
 from flask import flash, redirect, session, url_for, request, g, make_response, jsonify, abort
@@ -98,6 +99,7 @@ class UserInfoEditView(SimpleFormView):
         item = self.appbuilder.sm.get_user_by_id(g.user.id)
         # fills the form generic solution
         for key, value in  form.data.items():
+            if key == 'csrf_token': continue
             form_field = getattr(form, key)
             form_field.data = getattr(item, key)
 
@@ -184,6 +186,7 @@ class UserModelView(ModelView):
     @action('userinfoedit', lazy_gettext("Edit User"), "", "fa-edit", multiple=False)
     def userinfoedit(self, item):
         return redirect(url_for(self.appbuilder.sm.userinfoeditview.__name__ + '.this_form_get'))
+
 
 class UserOIDModelView(UserModelView):
     """
@@ -347,6 +350,7 @@ class RegisterUserModelView(ModelView):
     show_exclude_columns = ['password']
     search_exclude_columns = ['password']
 
+
 class AuthView(BaseView):
     route_base = ''
     login_template = ''
@@ -371,7 +375,7 @@ class AuthDBView(AuthView):
     @expose('/login/', methods=['GET', 'POST'])
     def login(self):
         if g.user is not None and g.user.is_authenticated():
-            return redirect('/')
+            return redirect(self.appbuilder.get_url_for_index)
         form = LoginForm_db()
         if form.validate_on_submit():
             user = self.appbuilder.sm.auth_user_db(form.username.data, form.password.data)
@@ -432,6 +436,7 @@ class AuthLDAPView(AuthView):
         
         return response     
     """
+
 
 class AuthOIDView(AuthView):
     login_template = 'appbuilder/general/security/login_oid.html'
@@ -525,9 +530,19 @@ class AuthOAuthView(AuthView):
             user = None
         else:
             log.debug("User info retrieved from {0}: {1}".format(provider, userinfo))
-            # Is this Authorization to register a new user ?
-            if session.pop('register', None):
-                return redirect(self.appbuilder.sm.registeruseroauthview.get_default_url(**userinfo))
+            # User email is not whitelisted
+            if provider in self.appbuilder.sm.oauth_whitelists:
+                whitelist = self.appbuilder.sm.oauth_whitelists[provider]
+                allow = False
+                for e in whitelist:
+                    if re.search(e, userinfo['email']):
+                        allow = True
+                        break
+                if not allow:
+                    flash(u'You are not authorized.', 'warning')
+                    return redirect('login')
+            else:
+                log.debug('No whitelist for OAuth provider')
             user = self.appbuilder.sm.auth_user_oauth(userinfo)
 
         if user is None:

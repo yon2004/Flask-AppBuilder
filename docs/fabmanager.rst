@@ -37,7 +37,7 @@ Take a quick look to the current possibilities. The bold ones require to import 
 
   - **version** - Flask-AppBuilder package version.
 
-Command Line uses the excelent click package, so you can have a detailed help for each command, for instance::
+Command Line uses the excellent click package, so you can have a detailed help for each command, for instance::
 
     $ fabmanager create-app --help
     Usage: fabmanager create-app [OPTIONS]
@@ -51,6 +51,15 @@ Command Line uses the excelent click package, so you can have a detailed help fo
                                   Write your engine type
     --help                          Show this message and exit.
 
+
+**babel-extract** - Babel, Extracts and updates all messages.
+----------------------------------------
+
+Use multi **-k** options separated by space to specify how to locate the strings you want to translate. 
+Default values: **lazy_gettext, gettext, _, __**.
+For example:
+
+    fabmanager babel-extract --target flask_appbuilder/translations/ -k _ -k __
 
 **create-app** - Create new Applications
 ----------------------------------------
@@ -68,7 +77,7 @@ This commands needs an internet connection to **github.com**, because it will do
 ---------------------------------------
 
 Use this to create your first **Admin** user, or additional ones. issue on the root directory of your application
-if your initializing **AppBuilder** on *app/__init__.py* and have named it appbuilder. If not use the **--app** and
+if you're initializing **AppBuilder** on *app/__init__.py* and have named it appbuilder. If not use the **--app** and
 **--appbuilder** switches to identify how to import **appbuilder**.
 
 This admin user can be used to any type of authentication method configured, but *fabmanager* will not checkit so
@@ -83,11 +92,11 @@ on certain deploys, if your web server is serving the static files directly.
 **upgrade-db** - Upgrade your database after F.A.B. upgrade to 1.3.0
 --------------------------------------------------------------------
 
-Will upgrade your database, necessary if your already using F.A.B. Users now are able to have multiple roles.
+Will upgrade your database, necessary if you're already using F.A.B. Users now are able to have multiple roles.
 Take a look at :doc:`versionmigration`
 
 Issue on the root directory of your application
-if your initializing **AppBuilder** on app/__init__.py and have named it appbuilder. If not use the **--app** and
+if you're initializing **AppBuilder** on app/__init__.py and have named it appbuilder. If not use the **--app** and
 **--appbuilder** switches to identify how to import **appbuilder**.
 
 **reset-password** - Resets a user's password.
@@ -95,7 +104,7 @@ if your initializing **AppBuilder** on app/__init__.py and have named it appbuil
 
 Reset a user's password, also needs to import **appbuilder** so 
 Issue on the root directory of your application
-if your initializing **AppBuilder** on app/__init__.py and have named it appbuilder. If not use the **--app** and
+if you're initializing **AppBuilder** on app/__init__.py and have named it appbuilder. If not use the **--app** and
 **--appbuilder** switches to identify how to import **appbuilder**.
 
 

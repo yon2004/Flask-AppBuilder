@@ -1,4 +1,6 @@
+import json
 import logging
+from datetime import datetime, date
 from flask import Blueprint, session, flash, render_template, url_for, abort
 from ._compat import as_unicode
 from .forms import GeneralModelConverter
@@ -110,7 +112,7 @@ class BaseView(object):
             :param endpoint:
                endpoint override for this blueprint, will assume class name if not provided
             :param static_folder:
-               the relative override for static folder, if ommited application will use the appbuilder static
+               the relative override for static folder, if omitted application will use the appbuilder static
         """
         # Store appbuilder instance
         self.appbuilder = appbuilder
@@ -340,7 +342,7 @@ class BaseModelView(BaseView):
 
     label_columns = None
     """
-        Dictionary of labels for your columns, override this if you want diferent pretify labels
+        Dictionary of labels for your columns, override this if you want different pretify labels
 
         example (will just override the label for name column)::
 
@@ -790,6 +792,10 @@ class BaseCRUDView(BaseModelView):
         joined_filters = filters.get_joined_filters(self._base_filters)
         count, lst = self.datamodel.query(joined_filters, order_column, order_direction, page=page, page_size=page_size)
         pks = self.datamodel.get_keys(lst)
+
+        # serialize composite pks
+        pks = [self._serialize_pk_if_composite(pk) for pk in pks]
+
         widgets['list'] = self.list_widget(label_columns=self.label_columns,
                                            include_columns=self.list_columns,
                                            value_columns=self.datamodel.get_values(lst, self.list_columns),
@@ -910,6 +916,7 @@ class BaseCRUDView(BaseModelView):
         if request.method == 'POST':
             self._fill_form_exclude_cols(exclude_cols, form)
             if form.validate():
+                self.process_form(form, True)
                 item = self.datamodel.obj()
                 form.populate_obj(item)
 
@@ -931,7 +938,7 @@ class BaseCRUDView(BaseModelView):
 
     def _edit(self, pk):
         """
-            Edit function logic, override to implement diferent logic
+            Edit function logic, override to implement different logic
             returns Edit widget and related list or None
         """
         is_valid_form = True
@@ -954,6 +961,7 @@ class BaseCRUDView(BaseModelView):
             # trick to pass unique validation
             form._id = pk
             if form.validate():
+                self.process_form(form, False)
                 form.populate_obj(item)
                 try:
                     self.pre_update(item)
@@ -970,6 +978,9 @@ class BaseCRUDView(BaseModelView):
         else:
             # Only force form refresh for select cascade events
             form = self.edit_form.refresh(obj=item)
+            # Perform additional actions to pre-fill the edit form.
+            self.prefill_form(form, pk)
+
         widgets = self._get_edit_widget(form=form, exclude_cols=exclude_cols)
         widgets = self._get_related_views_widgets(item, filters={},
                                                   orders=orders, pages=pages, page_sizes=page_sizes, widgets=widgets)
@@ -979,7 +990,7 @@ class BaseCRUDView(BaseModelView):
 
     def _delete(self, pk):
         """
-            Delete function logic, override to implement diferent logic
+            Delete function logic, override to implement different logic
             deletes the record with primary_key = pk
 
             :param pk:
@@ -1004,6 +1015,45 @@ class BaseCRUDView(BaseModelView):
     ------------------------------------------------
     """
 
+    def _serialize_pk_if_composite(self, pk):
+        def date_serializer(obj):
+            if isinstance(obj, datetime):
+                return {
+                    "_type": "datetime",
+                    "value": obj.isoformat()
+                }
+            elif isinstance(obj, date):
+                return {
+                    "_type": "date",
+                    "value": obj.isoformat()
+                }
+
+        if self.datamodel.is_pk_composite():
+            try:
+                pk = json.dumps(pk, default=date_serializer)
+            except:
+                pass
+        return pk
+
+    def _deserialize_pk_if_composite(self, pk):
+        def date_deserializer(obj):
+            if '_type' not in obj:
+                return obj
+
+            from dateutil import parser
+            if obj['_type'] == 'datetime':
+                return parser.parse(obj['value'])
+            elif obj['_type'] == 'date':
+                return parser.parse(obj['value']).date()
+            return obj
+
+        if self.datamodel.is_pk_composite():
+            try:
+                pk = json.loads(pk, object_hook=date_deserializer)
+            except:
+                pass
+        return pk
+
     def _fill_form_exclude_cols(self, exclude_cols, form):
         """
             fill the form with the suppressed cols, generated from exclude_cols
@@ -1011,8 +1061,43 @@ class BaseCRUDView(BaseModelView):
         for filter_key in exclude_cols:
             filter_value = self._filters.get_filter_value(filter_key)
             rel_obj = self.datamodel.get_related_obj(filter_key, filter_value)
-            field = getattr(form, filter_key)
-            field.data = rel_obj
+            if hasattr(form, filter_key):
+                field = getattr(form, filter_key)
+                field.data = rel_obj
+
+    def prefill_form(self, form, pk):
+        """
+            Override this, will be called only if the current action is rendering
+            an edit form (a GET request), and is used to perform additional action to
+            prefill the form.
+
+            This is useful when you have added custom fields that depend on the
+            database contents. Fields that were added by name of a normal column
+            or relationship should work out of the box.
+
+            example::
+
+                def prefill_form(self, form, pk):
+                    if form.email.data:
+                        form.email_confirmation.data = form.email.data
+        """
+        pass
+
+    def process_form(self, form, is_created):
+        """
+            Override this, will be called only if the current action is submitting
+            a create/edit form (a POST request), and is used to perform additional
+            action before the form is used to populate the item.
+
+            By default does nothing.
+
+            example::
+
+                def process_form(self, form, is_created):
+                    if not form.owner:
+                        form.owner.data = 'n/a'
+        """
+        pass
 
     def pre_update(self, item):
         """

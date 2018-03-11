@@ -1,6 +1,90 @@
 Versions
 ========
 
+Improvements and Bug fixes on 1.10.0
+------------------------------------
+
+- Fix, #712 improvement on parsing timezone dates
+- Fix, #701 permission deletion
+- Fix, #700 Non unique associations on security models
+- New, #694 Accept SQLAlchemy custom types defined by TypeDecorator
+- New, #686 Removed support for python 2.6
+
+Improvements and Bug fixes on 1.9.6
+-----------------------------------
+
+- Fix, #663 Allow remote user to be auto registered.
+- New, #639 Composite key support for SQLAlchemy.
+- New, #661 Add feature to allow form to be processed prior to populating model.
+
+Improvements and Bug fixes on 1.9.5
+-----------------------------------
+
+- New, #655 add feature to allow form prefill.
+- New, #631 add sqlalchemy support for binary types.
+- New, #626 support for traditional Chinese.
+- New, #626 possible to disable update permissions on startup.
+
+Improvements and Bug fixes on 1.9.4
+-----------------------------------
+
+- New, #596 font-awesome from 4.3 to 4.7.
+
+Improvements and Bug fixes on 1.9.3
+-----------------------------------
+
+- Fix, #544 for possible sql injection on order by clauses.
+- Fix, #550 check whether `session_form_edit_pk` still exist in db, on CompactCRUDMixin.
+- Fix, #553 for AttributeError when edit_columns on a view in related_views does not include relationship.
+- New, #562 Bump flask-babel version to 0.11.1, and pin.
+- Fix, #444 Create LDAP user firstname/lastname may return as bytes instead of str.
+- Fix, Fix divergence on versions between setup and requirements, pinned versions.
+
+Improvements and Bug fixes on 1.9.2
+-----------------------------------
+
+- New, #528 support for enum type (SQLA only).
+- Fix, Possible sql injection vulnerability.
+
+Improvements and Bug fixes on 1.9.1
+-----------------------------------
+
+- Fix, #489 python3 compatibility fix for unicode api_read.
+- Fix, #491 [api/update] only update keys specified in POST data.
+- Fix, #492 [cosmetics] making row button (show/edit/delete) not primary.
+- Fix, #493 [cosmetic] left-align the text in dropdowns.
+- New, #508 Updated bootswatch to version 3.3.7 five new themes included.
+- New, #512 Docs now use readthedocs theme.
+- New, #503 FileUploadField: process_on_store() and process_on_delete().
+- Fix, #511 Added new parameter to fabmanager babel-extract to include aditional keywords, defaults to **lazy_gettext, gettext, _, __**
+- New, #483 new parameter for LDAP username formatting AUTH_LDAP_USERNAME_FORMAT.
+
+Improvements and Bug fixes on 1.9.0
+-----------------------------------
+
+- Fix, Decorator oauth_user_info_getter was not according the docs, parameter bug.
+- Fix, #474 Missing menu deviders
+- Fix, #472 Prevent masquerade attacks through oauth providers.
+- New, Optional TLS for LDAP Authentication.
+- Fix, Factory setup was failing when babel get locale was being called.
+- New, Bootstrap updated to version 3.3.7.
+- New, flask-sqlalchemy updated to version 2.1.
+- New, #453 Added support for users to login with their username or email address.
+- Fix, #467 two instances of urls being generated wrongly when running under a prefix.
+- Fix, redirect to actual index view rather than '/' on logout for DBAuthView.
+- Fix, form actions not working under a prefix for CompactCRUDMixin.
+- Fix, #457 Don't overwrite csrf_token on form fill.
+- Fix, #453 [rest api] improve error messages, and return item object upon create/update.
+- New, flask-babel update.
+- Fix, #409 Google Oauth login and self registration.
+- New, #402 column_formatters to ModelView.
+- New, #374 default autosizing to app image (if any).
+- New, #393 More sensible default page size.
+- Fix, #397 security: don't crash on oauth errors.
+- Fix, #395 flask_wtf.Form has been renamed to FlaskForm.
+- Fix, #354 Improved spanish translation.
+- Fix, #352 some i18n related bugs.
+
 Improvements and Bug fixes on 1.8.1
 -----------------------------------
 
@@ -162,7 +246,7 @@ Improvements and Bug fixes on 1.3.6
 - SimpleFormView.form_post can return null to redirect back or a Flask response (render or redirect).
 - Changed the way related views are initialized, no bind to the related_views property.
 - #144 New MultipleView for rendering multiple BaseViews on the same page.
-- Can now import all views from flask.ext.appbuilder.
+- Can now import all views from flask_appbuilder.
 
 Improvements and Bug fixes on 1.3.5
 -----------------------------------
@@ -207,7 +291,7 @@ Improvements and Bug fixes on 1.3.0
 - New, edit_form_query_rel_fields, add_form_query_rel_fields changed, accepts dict instead of list (BREAKING CHANGE).
 - Fix, Filter rework datamodel is no longer optional for construct (BREAKING CHANGE).
 - Fix, Filter methods no longer require datamodel parameter (BREAKING CHANGE).
-- Fix, All SQLAlchemy Filter's moved to flask.ext.appbuilder.models.sqla.filters.
+- Fix, All SQLAlchemy Filter's moved to flask_appbuilder.models.sqla.filters.
 - New, All Filters are accessible from datamodel class, ex: datamodel.FilterEqual
 - New, Charts will be database ordered (better performance), and can accept dotted cols on relations.
 - Fix, on menus with dividers if next item has no permission, divider was shown.

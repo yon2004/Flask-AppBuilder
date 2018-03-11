@@ -51,13 +51,13 @@ def cli_app():
         of your flask-appbuilder applications.
 
         All commands that import your app will assume by default that
-        your running on your projects directory just before the app directory.
-        will assume also that on the __init__.py your initializing AppBuilder
+        you're running on your projects directory just before the app directory.
+        They will also assume that __init__.py initializes AppBuilder
         like this (using a var named appbuilder) just like the skeleton app::
 
         appbuilder = AppBuilder(......)
 
-        If your using different namings use app and appbuilder parameters.
+        If you're using different namings use app and appbuilder parameters.
     """
     pass
 
@@ -189,12 +189,14 @@ def list_users(app, appbuilder):
 @click.option('--input', default='.')
 @click.option('--output', default='./babel/messages.pot')
 @click.option('--target', default='app/translations')
-def babel_extract(config, input, output, target):
+@click.option('--keywords', '-k', multiple=True, default=['lazy_gettext', 'gettext', '_', '__'])
+def babel_extract(config, input, output, target, keywords):
     """
         Babel, Extracts and updates all messages marked for translation
     """
-    click.echo(click.style('Starting Extractions config:{0} input:{1} output:{2}'.format(config, input, output), fg='green'))
-    os.popen('pybabel extract -F {0} -k lazy_gettext -o {1} {2}'.format(config, output, input))
+    click.echo(click.style('Starting Extractions config:{0} input:{1} output:{2} keywords:{3}'.format(config, input, output, keywords), fg='green'))
+    keywords = ' -k '.join(keywords)
+    os.popen('pybabel extract -F {0} -k {1} -o {2} {3}'.format(config, keywords, output, input))
     click.echo(click.style('Starting Update target:{0}'.format(target), fg='green'))
     os.popen('pybabel update -N -i {0} -d {1}'.format(output, target))
     click.echo(click.style('Finish, you can start your translations', fg='green'))

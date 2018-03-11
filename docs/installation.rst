@@ -105,8 +105,8 @@ all AppBuilder security tables will be created for you.
 All your models can easily be created too (optionally).
 
 .. note:: Since version 1.3.0 no admin user is automatically created, you must use **fabmanager** to do it.
-There are lot's of other useful options you can use with **fabmanager** to reset user's password,
-list all your users and views, etc.
+    There are lot's of other useful options you can use with **fabmanager** like reset user's password,
+    list all your users and views, etc.
 
 Installation Requirements
 -------------------------
@@ -122,10 +122,10 @@ Flask App Builder dependes on
     - flask-wtform : Web forms.
     - flask-Babel : For internationalization.
 
-If you plan to use Image on database, you will need to install PIL::
+If you plan to use Image processing or upload, you will need to install PIL::
 
     pip install pillow
-    
+
 or::
 
     pip install PIL
@@ -134,7 +134,7 @@ or::
 Python 2 and 3 Compatibility
 ----------------------------
 
-The framework itself is compatible and has been tested for Python 2.6, 2.7 and 3.3.
+The framework itself is compatible and has been tested for Python 2.7 and 3.3.
 But there is still one problem in Python 3.3, the framework internationalization feature
 uses the excellent package Babel, but i've found an incompatibility on it for python 3.3.
 While this problem is not solved there is a limitation for Py3.3 on F.A.B. you can't use

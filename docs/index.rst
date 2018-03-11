@@ -1,7 +1,7 @@
 Flask-AppBuilder
 ================
 
-.. module:: flask.ext.appbuilder
+.. module:: flask_appbuilder
 
 Simple and rapid application development framework, built on top of `Flask <http://flask.pocoo.org/>`_.
 Includes detailed security, auto CRUD generation for your models, google charts and much more.
@@ -41,7 +41,7 @@ Contents:
    quickminimal
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    relations
    actions
@@ -58,14 +58,15 @@ Contents:
    i18n
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    security
    user_registration
 
 .. toctree::
    :maxdepth: 1
-   
+
+   diagrams
    api
    versionmigration
    versions

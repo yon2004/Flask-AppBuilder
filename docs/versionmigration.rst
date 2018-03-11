@@ -1,6 +1,59 @@
 Version Migration
 =================
 
+Migrating to 1.9.0
+------------------
+
+If you are using OAuth for authentication, this release will break your logins. This break is due to two reasons
+
+One:
+
+
+There was a security issue when using the default builtin information getter for the providers
+(see github: Prevent masquerade attacks through oauth providers #472)
+This fix will prepend the provider to the user id. So you're usernames will look like 'google_<USER_ID>'
+
+Two:
+
+
+For google OAuth we migrated from the old and deprecated google plus API to OAuth2/v2, the old User.username field
+was based on the Google Plus display name, and now is based on a Google user_id.
+
+
+In order to upgrade without breaking, you can override the current default OAuth information getter using something like this::
+
+
+    @appbuilder.sm.oauth_user_info_getter
+    def get_oauth_user_info(sm, provider, response=None):
+    # for GITHUB
+        if provider == 'github' or provider == 'githublocal':
+            me = sm.oauth_remotes[provider].get('user')
+            return {'username': me.data.get('login')}
+        # for twitter
+        if provider == 'twitter':
+            me = sm.oauth_remotes[provider].get('account/settings.json')
+            return {'username': me.data.get('screen_name', '')}
+        # for linkedin
+        if provider == 'linkedin':
+            me = sm.oauth_remotes[provider].get('people/~:(id,email-address,first-name,last-name)?format=json')
+            return {'username': me.data.get('id', ''),
+                    'email': me.data.get('email-address', ''),
+                    'first_name': me.data.get('firstName', ''),
+                    'last_name': me.data.get('lastName', '')}
+        # for Google
+        if provider == 'google':
+            me = sm.oauth_remotes[provider].get('userinfo')
+            return {'username': me.data.get('id', ''),
+                    'first_name': me.data.get('given_name', ''),
+                    'last_name': me.data.get('family_name', ''),
+                    'email': me.data.get('email', '')}
+
+
+There was a Fix for the **oauth_user_info_getter** decorator also, now it will obey the doc definition.
+
+Any help you need feel free to submit an Issue!
+
+
 Migrating to 1.8.0
 ------------------
 
@@ -22,7 +75,7 @@ Migrating from 1.2.X to 1.3.X
 
 There are some breaking features:
 
-1 - Security models have changed, user's can have multiple roles, not just one. So you have to upgrade your db.
+1 - Security models have changed, users can have multiple roles, not just one. So you have to upgrade your db.
 
 - The security models schema have changed.
 
@@ -50,24 +103,24 @@ are common to all of them. Change:
 
 from::
 
-    from flask.ext.appbuilder.security.sqla.views import UserDBModelView
-    from flask.ext.appbuilder.security.manager import SecurityManager
+    from flask_appbuilder.security.sqla.views import UserDBModelView
+    from flask_appbuilder.security.manager import SecurityManager
 
 
 to::
 
-    from flask.ext.appbuilder.security.views import UserDBModelView
-    from flask.ext.appbuilder.security.sqla.manager import SecurityManager
+    from flask_appbuilder.security.views import UserDBModelView
+    from flask_appbuilder.security.sqla.manager import SecurityManager
 
 3 - SQLAInteface, SQLAModel. If you were importing like the following, change:
 
 from::
 
-    from flask.ext.appbuilder.models import SQLAInterface
+    from flask_appbuilder.models import SQLAInterface
 
 to::
 
-    from flask.ext.appbuilder.models.sqla.interface import SQLAInterface
+    from flask_appbuilder.models.sqla.interface import SQLAInterface
 
 4 - Filters, filters import moved::
 
@@ -98,13 +151,13 @@ There is a breaking feature, change your filters import like this:
 
 from::
 
-    flask.ext.appbuilder.models.base import Filters, BaseFilter, BaseFilterConverter
-    flask.ext.appbuilder.models.filters import FilterEqual, FilterRelation ....
+    flask_appbuilder.models.base import Filters, BaseFilter, BaseFilterConverter
+    flask_appbuilder.models.filters import FilterEqual, FilterRelation ....
 
 to::
 
-    flask.ext.appbuilder.models.filters import Filters, BaseFilter, BaseFilterConverter
-    flask.ext.appbuilder.models.sqla.filter import FilterEqual, FilterRelation ....
+    flask_appbuilder.models.filters import Filters, BaseFilter, BaseFilterConverter
+    flask_appbuilder.models.sqla.filter import FilterEqual, FilterRelation ....
 
 
 Migrating from 0.9.X to 0.10.X
@@ -117,12 +170,12 @@ But, to keep up with the changes, you should change these:
 
 ::
 
-    from flask.ext.appbuilder.models.datamodel import SQLAModel
-    from flask.ext.appbuilder.models.filters import FilterEqual, FilterContains
+    from flask_appbuilder.models.datamodel import SQLAModel
+    from flask_appbuilder.models.filters import FilterEqual, FilterContains
 to::
 
-    from flask.ext.appbuilder.models.sqla.interface import SQLAInterface
-    from flask.ext.appbuilder.models.sqla.filters import FilterEqual, FilterContains
+    from flask_appbuilder.models.sqla.interface import SQLAInterface
+    from flask_appbuilder.models.sqla.filters import FilterEqual, FilterContains
 
 
 
@@ -164,14 +217,14 @@ this is the breaking feature.
             id = Column(Integer, primary_key=True)
             first_name = Column(String(64), nullable=False)
 
-5 - Although your not obligated, you should not directly use your flask.ext.sqlalchemy class SQLAlchemy.
+5 - Although you're not obligated, you should not directly use your flask.ext.sqlalchemy class SQLAlchemy.
 Use F.A.B. SQLA class instead, read the docs to know why.
 
     from (__init__.py)::
 
         from flask import Flask
         from flask.ext.sqlalchemy import SQLAlchemy
-        from flask.ext.appbuilder.baseapp import BaseApp
+        from flask_appbuilder.baseapp import BaseApp
 
 
         app = Flask(__name__)
@@ -182,7 +235,7 @@ Use F.A.B. SQLA class instead, read the docs to know why.
     to (__init__.py)::
 
         from flask import Flask
-        from flask.ext.appbuilder import SQLA, AppBuilder
+        from flask_appbuilder import SQLA, AppBuilder
 
         app = Flask(__name__)
         app.config.from_object('config')
@@ -216,7 +269,7 @@ This new version has some breaking features. You don't have to change any code, 
 
             python run.py
 
-    If not (DB is not sqlite, mysql or pgsql), you will have to alter the schema your self. use the following procedure:
+    If not (DB is not sqlite, mysql or pgsql), you will have to alter the schema yourself. use the following procedure:
 
         1 - *Backup your DB*.
 
@@ -258,7 +311,7 @@ This new version has some breaking features, that i hope will be easily changeab
 
 If you feel lost please post an issue on github: https://github.com/dpgaspar/Flask-AppBuilder/issues?state=open
 
-If your using the **related_views** attribute on ModelView classes, you must not instantiate the related classes. This is the correct form, it will be less memory and cpu resource consuming.
+If you're using the **related_views** attribute on ModelView classes, you must not instantiate the related classes. This is the correct form, it will be less memory and cpu resource consuming.
 
 From this::
 

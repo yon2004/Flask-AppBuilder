@@ -1,4 +1,6 @@
 import logging
+import datetime
+from dateutil import parser
 from flask_babel import lazy_gettext
 from ..filters import BaseFilter, FilterRelation, BaseFilterConverter
 
@@ -41,6 +43,16 @@ def set_value_to_type(datamodel, column_name, value):
     elif datamodel.is_boolean(column_name):
             if value == 'y':
                 return True
+    elif datamodel.is_date(column_name) and not isinstance(value, datetime.date):
+        try:
+            return parser.parse(value).date()
+        except Exception as e:
+            return None
+    elif datamodel.is_datetime(column_name) and not isinstance(value, datetime.datetime):
+        try:
+            return parser.parse(value)
+        except Exception as e:
+            return None
     return value
 
 
@@ -183,6 +195,8 @@ class SQLAFilterConverter(BaseFilterConverter):
                         FilterRelationOneToManyNotEqual]),
                         ('is_relation_many_to_many', [FilterRelationManyToManyEqual]),
                         ('is_relation_one_to_many', [FilterRelationManyToManyEqual]),
+                        ('is_enum', [FilterEqual,
+                                     FilterNotEqual]),
                         ('is_text', [FilterStartsWith,
                                      FilterEndsWith,
                                      FilterContains,
@@ -191,6 +205,14 @@ class SQLAFilterConverter(BaseFilterConverter):
                                      FilterNotEndsWith,
                                      FilterNotContains,
                                      FilterNotEqual]),
+                        ('is_binary', [FilterStartsWith,
+                                       FilterEndsWith,
+                                       FilterContains,
+                                       FilterEqual,
+                                       FilterNotStartsWith,
+                                       FilterNotEndsWith,
+                                       FilterNotContains,
+                                       FilterNotEqual]),
                         ('is_string', [FilterStartsWith,
                                        FilterEndsWith,
                                        FilterContains,

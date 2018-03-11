@@ -53,7 +53,7 @@ These base permissions will be associated to your view, so if you create a view 
 - can add on MyModelView
 - can edit on MyModelView
 - can delete on MyModelView
-- can doanload on MyModelView
+- can download on MyModelView
 	
 If you extend your view with some exposed method via the @expose decorator and you want to protect it
 use the @has_access decorator::
@@ -115,7 +115,7 @@ On the show detail for each user you can check who created the user and when and
 You can check also, a total login count (successful login), and the last failed logins
 (these are reset if a successful login occurred).
 
-If your using SQLAlchemy you can mix auditing to your models in a simple way. Mix AuditMixin class to your models::
+If you're using SQLAlchemy you can mix auditing to your models in a simple way. Mix AuditMixin class to your models::
 
     from flask_appbuilder.models.mixins import AuditMixin
     from flask_appbuilder import Model
@@ -145,14 +145,13 @@ Authentication Methods
 ----------------------
 
 We are now looking at the authentication methods, and how you can configure them and customize them.
-The framework as 5 authentication methods and you choose one of them, you configure the method to be used
-on the **config.py** (when using the create-app, or following the propused app structure). First the
+The framework has 5 authentication methods and you choose one of them, you configure the method to be used
+on the **config.py** (when using the create-app, or following the proposed app structure). First the
 configuration imports the constants for the authentication methods::
 
     from flask_appbuilder.security.manager import AUTH_OID, \ 
                                               AUTH_REMOTE_USER, \ 
                                               AUTH_DB, AUTH_LDAP, \ 
-                                              AUTH_OAUTH, \
                                               AUTH_OAUTH
 
 Next you will use the **AUTH_TYPE** key to choose the type::
@@ -208,12 +207,14 @@ is very simple, for MSFT AD just define the LDAP server::
 
     AUTH_TYPE = AUTH_LDAP
     AUTH_LDAP_SERVER = "ldap://ldapserver.local"
+    AUTH_LDAP_USE_TLS = False
 
 For OpenLDAP or if you need/want to bind first with a query LDAP user, 
 then using username to search the LDAP server and binding to it (using the user provided password)::
 
     AUTH_TYPE = AUTH_LDAP
     AUTH_LDAP_SERVER = "ldap://ldapserver.local"
+    AUTH_LDAP_USE_TLS = False
     AUTH_LDAP_SEARCH = "dc=domain,dc=local"
     AUTH_LDAP_BIND_USER = "CN=Query User,OU=People,dc=domain,dc=local"
     AUTH_LDAP_BIND_PASSWORD = "password"
@@ -236,12 +237,12 @@ When using self user registration, you can use the following to config further:
 Authentication: OAuth
 ---------------------
 
-By using this method it will be possible to use the provider API, this is because your requesting the user to give
+By using this method it will be possible to use the provider API, this is because you're requesting the user to give
 permission to your app to access or manage the user's account on the provider.
 
 So you can send tweets, post on the users facebook, retrieve the user's linkedin profile etc.
 
-To use OAuth you need to install `Flask-OAuthLib <https://flask-oauthlib.readthedocs.org/en/latest/>`_. It's usefull
+To use OAuth you need to install `Flask-OAuthLib <https://flask-oauthlib.readthedocs.org/en/latest/>`_. It's useful
 to get to know this library since F.A.B. will expose the remote application object for you to play with.
 
 Take a look at the `example <https://github.com/dpgaspar/Flask-AppBuilder/tree/master/examples/oauth>`_ 
@@ -266,9 +267,9 @@ key is just the configuration for flask-oauthlib::
             'remote_app': {
                 'consumer_key':'GOOGLE KEY',
                 'consumer_secret':'GOOGLE SECRET',
-                'base_url':'https://www.googleapis.com/plus/v1/',
+                'base_url':'https://www.googleapis.com/oauth2/v2/',
                 'request_token_params':{
-                  'scope': 'https://www.googleapis.com/auth/userinfo.email'
+                  'scope': 'email profile'
                 },
                 'request_token_url':None,
                 'access_token_url':'https://accounts.google.com/o/oauth2/token',
@@ -322,7 +323,7 @@ First i advise you to create security.py and add the following to it::
     from flask import redirect
     from flask_appbuilder.security.views import UserDBModelView
     from flask_appbuilder.security.sqla.manager import SecurityManager
-    from flask.ext.appbuilder.actions import action
+    from flask_appbuilder.actions import action
 
 
     class MyUserDBView(UserDBModelView):
@@ -372,7 +373,7 @@ First extend the User Model (create a sec_models.py file)::
 
 
 Next define a new User view, just like the default User view but with the extra column (create a sec_view.py)
-If your using:
+If you're using:
 
 - AUTH_DB extend UserDBModelView
 - AUTH_LDAP extend UserLDAPModelView
@@ -423,7 +424,7 @@ Next create your own SecurityManager class, overriding your model and view for U
         user_model = MyUser
         userdbmodelview = MyUserDBModelView
 
-Note that this is for AUTH_DB, so if your using:
+Note that this is for AUTH_DB, so if you're using:
 
 - AUTH_DB override userdbmodelview
 - AUTH_LDAP override userldapmodelview
@@ -434,8 +435,8 @@ Finally (as shown on the previous example) tell F.A.B. to use your SecurityManag
 **AppBuilder** (on __init__.py)::
 
     from flask import Flask
-    from flask.ext.appbuilder import SQLA, AppBuilder
-    from flask.ext.appbuilder.menu import Menu
+    from flask_appbuilder import SQLA, AppBuilder
+    from flask_appbuilder.menu import Menu
     from .sec import MySecurityManager
 
     app = Flask(__name__)

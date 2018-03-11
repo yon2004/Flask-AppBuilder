@@ -2,7 +2,7 @@ import logging
 import json
 from flask import (
     flash, redirect, send_file, jsonify, make_response, url_for, session, abort)
-from ._compat import as_unicode
+from ._compat import as_unicode, string_types
 from .filemanager import uuid_originalname
 from .widgets import GroupFormListWidget, ListMasterWidget
 from .baseviews import BaseView, BaseCRUDView, BaseFormView, expose, expose_api
@@ -231,6 +231,16 @@ class RestCRUDView(BaseCRUDView):
         response.headers['Content-Type'] = "application/json"
         return response
 
+    def show_item_dict(self, item):
+        """Returns a json-able dict for show"""
+        d = {}
+        for col in self.show_columns:
+            v = getattr(item, col)
+            if not isinstance(v, (int, float, string_types)):
+                v = str(v)
+            d[col] = v
+        return d
+
     @expose_api(name='get', url='/api/get/<pk>', methods=['GET'])
     @has_access_api
     @permission_name('show')
@@ -241,15 +251,11 @@ class RestCRUDView(BaseCRUDView):
         item = self.datamodel.get(pk, self._base_filters)
         if not item:
             abort(404)
-        _item = dict()
-        for col in self.show_columns:
-            _item[col] = str(getattr(item, col))
-
         ret_json = jsonify(pk=pk,
                            label_columns=self._label_columns_json(),
                            include_columns=self.show_columns,
                            modelview_name=self.__class__.__name__,
-                           result=_item)
+                           result=self.show_item_dict(item))
         response = make_response(ret_json, 200)
         response.headers['Content-Type'] = "application/json"
         return response
@@ -258,11 +264,9 @@ class RestCRUDView(BaseCRUDView):
     @has_access_api
     @permission_name('add')
     def api_create(self):
-        is_valid_form = True
         get_filter_args(self._filters)
         exclude_cols = self._filters.get_relation_cols()
         form = self.add_form.refresh()
-
         self._fill_form_exclude_cols(exclude_cols, form)
         if form.validate():
             item = self.datamodel.obj()
@@ -273,22 +277,23 @@ class RestCRUDView(BaseCRUDView):
                 http_return_code = 200
             else:
                 http_return_code = 500
+            payload = {
+                'message': self.datamodel.message[0],
+                'item': self.show_item_dict(item),
+                'severity': self.datamodel.message[1],
+            }
         else:
-            is_valid_form = False
-        if is_valid_form:
-            response = make_response(jsonify({'message': self.datamodel.message[0],
-                                              'severity': self.datamodel.message[1]}), http_return_code)
-        else:
-            # TODO return dict with errors
-            response = make_response(jsonify({'message': 'Invalid form',
-                                              'severity': 'warning'}), 500)
-        return response
+            payload = {
+                'message': 'Validation error',
+                'error_details': form.errors,
+            }
+            http_return_code = 500
+        return make_response(jsonify(payload), http_return_code)
 
     @expose_api(name='update', url='/api/update/<pk>', methods=['PUT'])
     @has_access_api
     @permission_name('edit')
     def api_update(self, pk):
-        is_valid_form = True
         get_filter_args(self._filters)
         exclude_cols = self._filters.get_relation_cols()
 
@@ -303,25 +308,33 @@ class RestCRUDView(BaseCRUDView):
         self._fill_form_exclude_cols(exclude_cols, form)
         # trick to pass unique validation
         form._id = pk
+        http_return_code = 500
         if form.validate():
+
+            # Deleting form fields not specified as keys in POST data
+            # this allows for other Model columns to be left untouched when
+            # unspecified.
+            form_fields = set([t for t in form._fields.keys()])
+            for field in form_fields - set(request.form.keys()):
+                delattr(form, field)
+
             form.populate_obj(item)
             self.pre_update(item)
             if self.datamodel.edit(item):
                 self.post_update(item)
                 http_return_code = 200
-            else:
-                http_return_code = 500
+            payload = {
+                'message': self.datamodel.message[0],
+                'severity': self.datamodel.message[1],
+                'item': self.show_item_dict(item),
+            }
         else:
-            is_valid_form = False
-        if is_valid_form:
-            response = make_response(jsonify({'message': self.datamodel.message[0],
-                                              'severity': self.datamodel.message[1]}), http_return_code)
-        else:
-            # TODO return dict with from errors validation
-            response = make_response(jsonify({'message': 'Invalid form',
-                                              'severity': 'warning'}), 500)
-        return response
-
+            payload = {
+                'message': 'Validation error',
+                'error_details': form.errors,
+                'severity': 'warning',
+            }
+        return make_response(jsonify(payload), http_return_code)
 
     @expose_api(name='delete', url='/api/delete/<pk>', methods=['DELETE'])
     @has_access_api
@@ -473,6 +486,7 @@ class ModelView(RestCRUDView):
     @expose('/show/<pk>', methods=['GET'])
     @has_access
     def show(self, pk):
+        pk = self._deserialize_pk_if_composite(pk)
         widgets = self._show(pk)
         return self.render_template(self.show_template,
                                     pk=pk,
@@ -506,6 +520,7 @@ class ModelView(RestCRUDView):
     @expose('/edit/<pk>', methods=['GET', 'POST'])
     @has_access
     def edit(self, pk):
+        pk = self._deserialize_pk_if_composite(pk)
         widgets = self._edit(pk)
         if not widgets:
             return self.post_edit_redirect()
@@ -524,6 +539,7 @@ class ModelView(RestCRUDView):
     @expose('/delete/<pk>')
     @has_access
     def delete(self, pk):
+        pk = self._deserialize_pk_if_composite(pk)
         self._delete(pk)
         return self.post_delete_redirect()
 
@@ -540,6 +556,7 @@ class ModelView(RestCRUDView):
         """
             Action method to handle actions from a show view
         """
+        pk = self._deserialize_pk_if_composite(pk)
         if self.appbuilder.sm.has_access(name, self.__class__.__name__):
             action = self.actions.get(name)
             return action.func(self.datamodel.get(pk))
@@ -557,7 +574,7 @@ class ModelView(RestCRUDView):
         pks = request.form.getlist('rowid')
         if self.appbuilder.sm.has_access(name, self.__class__.__name__):
             action = self.actions.get(name)
-            items = [self.datamodel.get(pk) for pk in pks]
+            items = [self.datamodel.get(self._deserialize_pk_if_composite(pk)) for pk in pks]
             return action.func(items)
         else:
             flash(as_unicode(FLAMSG_ERR_SEC_ACCESS_DENIED), "danger")
@@ -703,7 +720,7 @@ class CompactCRUDMixin(BaseCRUDView):
             form_widget = self._add().get('add')
         elif session_form_widget == 'edit':
             pk = self.get_key('session_form_edit_pk')
-            if pk:
+            if pk and self.datamodel.get(int(pk)):
                 form_widget = self._edit(int(pk)).get('edit')
         return {
             'list': GroupFormListWidget(
@@ -732,13 +749,17 @@ class CompactCRUDMixin(BaseCRUDView):
             return redirect(request.referrer)
         else:
             self.set_key('session_form_widget', 'add')
-            self.set_key('session_form_action', request.full_path)
+            self.set_key(
+                'session_form_action',
+                request.script_root + request.full_path
+            )
             self.set_key('session_form_title', self.add_title)
             return redirect(self.get_redirect())
 
     @expose('/edit/<pk>', methods=['GET', 'POST'])
     @has_access
     def edit(self, pk):
+        pk = self._deserialize_pk_if_composite(pk)
         widgets = self._edit(pk)
         self.update_redirect()
         if not widgets:
@@ -747,7 +768,10 @@ class CompactCRUDMixin(BaseCRUDView):
             return redirect(self.get_redirect())
         else:
             self.set_key('session_form_widget', 'edit')
-            self.set_key('session_form_action', request.full_path)
+            self.set_key(
+                'session_form_action',
+                request.script_root + request.full_path
+            )
             self.set_key('session_form_title', self.add_title)
             self.set_key('session_form_edit_pk', pk)
             return redirect(self.get_redirect())
@@ -755,6 +779,7 @@ class CompactCRUDMixin(BaseCRUDView):
     @expose('/delete/<pk>')
     @has_access
     def delete(self, pk):
+        pk = self._deserialize_pk_if_composite(pk)
         self._delete(pk)
         edit_pk = self.get_key('session_form_edit_pk')
         if pk == edit_pk:
